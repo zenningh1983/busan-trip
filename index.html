@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>釜山之旅 🇰🇷 July 2026</title>
+  <style>
+    :root {
+      --pink: #FF6B9D;
+      --coral: #FF8C69;
+      --teal: #4ECDC4;
+      --navy: #2C3E7A;
+      --cream: #FFF8F0;
+      --gray: #8A9BB0;
+      --light: #F0F4FF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'Noto Sans TC', sans-serif;
+      background: var(--cream); color: #333;
+      max-width: 430px; margin: 0 auto; min-height: 100vh;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, #5B6DD4 50%, var(--teal) 100%);
+      padding: 40px 24px 60px; text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; bottom: -30px; left: 0; right: 0;
+      height: 60px; background: var(--cream); border-radius: 50% 50% 0 0;
+    }
+    .hero-emoji { font-size: 48px; margin-bottom: 8px; }
+    .hero h1 { color: white; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .hero p { color: rgba(255,255,255,0.8); font-size: 14px; margin-top: 4px; }
+    .countdown { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+    .count-box { background: rgba(255,255,255,0.2); border-radius: 12px; padding: 10px 14px; text-align: center; backdrop-filter: blur(10px); }
+    .count-box .num { color: white; font-size: 28px; font-weight: 900; line-height: 1; }
+    .count-box .label { color: rgba(255,255,255,0.7); font-size: 10px; margin-top: 2px; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; background: white; padding: 8px; gap: 4px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .tab { flex: 1; padding: 8px 4px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 11px; color: var(--gray); display: flex; flex-direction: column; align-items: center; gap: 2px; transition: all 0.2s; }
+    .tab.active { background: var(--light); color: var(--navy); font-weight: 700; }
+    .tab-icon { font-size: 18px; }
+    .section { display: none; padding: 20px 16px 80px; }
+    .section.active { display: block; }
+    .section-title { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* ── 出征誓言 Popup ── */
+    .oath-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(10,10,30,0.82);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .oath-overlay.show { opacity: 1; pointer-events: auto; }
+    .oath-modal {
+      background: linear-gradient(160deg, #1a1a2e 0%, #2C3E7A 100%);
+      width: 100%; max-width: 430px;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 18px 36px;
+      max-height: 88vh; overflow-y: auto;
+      position: relative;
+      transform: translateY(60px); transition: transform 0.35s cubic-bezier(.2,.8,.3,1);
+    }
+    .oath-overlay.show .oath-modal { transform: translateY(0); }
+    .oath-header-btns {
+      position: absolute; top: 14px; right: 16px;
+      display: flex; gap: 6px;
+    }
+    .oath-close, .oath-edit-btn {
+      background: rgba(255,255,255,0.12); border: none; border-radius: 50%;
+      width: 30px; height: 30px; font-size: 15px; color: white;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background 0.15s;
+    }
+    .oath-close:hover, .oath-edit-btn:hover { background: rgba(255,255,255,0.22); }
+    .oath-edit-btn.active { background: rgba(255,215,0,0.25); color: #FFD700; }
+    .oath-drag-bar {
+      width: 40px; height: 4px; background: rgba(255,255,255,0.2);
+      border-radius: 2px; margin: 0 auto 16px;
+    }
+    .oath-title {
+      font-size: 15px; font-weight: 900; color: #FFD700;
+      letter-spacing: 1px; margin-bottom: 4px; text-align: center;
+    }
+    .oath-subtitle {
+      font-size: 11px; color: rgba(255,255,255,0.45); text-align: center; margin-bottom: 14px;
+    }
+    .oath-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 9px 10px; border-radius: 10px; margin-bottom: 6px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .oath-item:hover { background: rgba(255,255,255,0.06); }
+    .oath-item.sworn { background: rgba(78,205,196,0.12); }
+    .oath-item.editing { cursor: default; background: rgba(255,255,255,0.05); }
+    .oath-item.editing:hover { background: rgba(255,255,255,0.05); }
+    .oath-num { font-size: 11px; font-weight: 800; color: #FFD700; min-width: 18px; margin-top: 4px; flex-shrink: 0; }
+    .oath-text { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; flex: 1; }
+    .oath-item.sworn .oath-text { color: rgba(78,205,196,0.9); text-decoration: line-through; text-decoration-color: rgba(78,205,196,0.4); }
+    .oath-check { font-size: 16px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s; }
+    .oath-item.sworn .oath-check { opacity: 1; }
+    .oath-textarea {
+      flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; color: white; font-size: 13px; line-height: 1.6;
+      font-family: inherit; padding: 6px 8px; resize: none; outline: none;
+      min-height: 54px;
+    }
+    .oath-textarea:focus { border-color: rgba(255,215,0,0.5); background: rgba(255,255,255,0.1); }
+    .oath-del-btn {
+      background: none; border: none; color: rgba(255,100,100,0.5);
+      font-size: 16px; cursor: pointer; padding: 2px 4px; flex-shrink: 0;
+      transition: color 0.15s; margin-top: 2px;
+    }
+    .oath-del-btn:hover { color: #f46; }
+    .oath-add-btn {
+      width: 100%; margin-top: 8px; padding: 9px;
+      background: rgba(255,255,255,0.07); border: 1.5px dashed rgba(255,215,0,0.3);
+      border-radius: 10px; color: rgba(255,215,0,0.7);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .oath-add-btn:hover { background: rgba(255,215,0,0.1); }
+    .oath-footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; }
+    .oath-progress { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 10px; }
+    .oath-seal {
+      padding: 10px 28px;
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #1a1a2e; font-size: 14px; font-weight: 900;
+      border-radius: 22px; border: none; cursor: pointer;
+      letter-spacing: 0.5px; transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(255,215,0,0.35);
+    }
+    .oath-seal:hover { transform: scale(1.04); }
+    .oath-seal:active { transform: scale(0.97); }
+    .oath-seal.done { background: linear-gradient(135deg, var(--teal), #00BCD4); color: white; box-shadow: 0 4px 16px rgba(78,205,196,0.35); }
+
+    /* ── Edit hint ── */
+    .edit-hint { text-align: center; font-size: 12px; color: var(--gray); margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+    /* ── Day block ── */
+    .day-block { margin-bottom: 4px; }
+    .day-header { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--navy), #5B6DD4); color: white; padding: 11px 14px; border-radius: 12px; margin-bottom: 6px; margin-top: 16px; font-weight: 700; font-size: 14px; }
+    .day-block:first-child .day-header { margin-top: 0; }
+    .day-label-edit { flex: 1; background: transparent; border: none; color: white; font-size: 14px; font-weight: 700; font-family: inherit; outline: none; min-width: 0; }
+    .day-label-edit::placeholder { color: rgba(255,255,255,0.5); }
+    .btn-day-delete { background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-size: 13px; padding: 3px 7px; cursor: pointer; line-height: 1; }
+    .btn-day-delete:hover { background: rgba(255,80,80,0.4); }
+
+    /* ── Day card (drop zone) ── */
+    .day-card { background: white; border-radius: 14px; padding: 6px 12px 4px; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: box-shadow 0.2s, border 0.2s; border: 2px solid transparent; min-height: 50px; }
+    .day-card.drag-over { border: 2px dashed var(--teal); box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
+
+    /* ── Timeline item ── */
+    .timeline-item { display: flex; align-items: flex-start; gap: 8px; padding: 9px 0; border-bottom: 1px solid #F0F4FF; position: relative; transition: opacity 0.2s; }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-item.dragging { opacity: 0.35; }
+    .timeline-item.drop-target { border-top: 2px solid var(--teal); }
+
+    .drag-handle { cursor: grab; color: #ccc; font-size: 16px; flex-shrink: 0; padding: 2px 0; user-select: none; line-height: 1; margin-top: 4px; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+
+    .time-input { background: var(--light); color: var(--navy); border: none; border-radius: 8px; font-size: 11px; font-weight: 700; padding: 5px 6px; width: 50px; text-align: center; font-family: inherit; outline: none; flex-shrink: 0; cursor: text; }
+    .time-input:focus { background: #dce8ff; }
+    .timeline-fields { flex: 1; min-width: 0; }
+    .spot-name-input { display: block; width: 100%; font-size: 14px; font-weight: 600; color: #333; border: none; background: transparent; font-family: inherit; outline: none; padding: 0; }
+    .spot-name-input:focus { border-bottom: 1.5px solid var(--teal); }
+    .spot-name-input::placeholder { color: #bbb; }
+    .spot-desc-input { display: block; width: 100%; font-size: 12px; color: var(--gray); border: none; background: transparent; font-family: inherit; outline: none; padding: 0; margin-top: 3px; resize: none; overflow: hidden; min-height: 18px; }
+    .spot-desc-input:focus { border-bottom: 1px dashed #ccc; }
+    .spot-desc-input::placeholder { color: #ccc; }
+
+    /* Move button */
+    .btn-move { background: none; border: none; cursor: pointer; color: #bbb; font-size: 14px; padding: 2px 3px; flex-shrink: 0; transition: color 0.15s; position: relative; margin-top: 2px; }
+    .btn-move:hover { color: var(--teal); }
+    .btn-item-delete { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 2px 3px; flex-shrink: 0; transition: color 0.15s; margin-top: 1px; }
+    .btn-item-delete:hover { color: #f46; }
+    .btn-pin { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 3px; flex-shrink: 0; opacity: 0.4; transition: opacity 0.15s; }
+    .btn-pin:hover { opacity: 1; }
+    .item-actions { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0; flex-shrink: 0; }
+    .btn-updown { background: none; border: none; cursor: pointer; color: #bbb; font-size: 13px; padding: 1px 4px; line-height: 1; transition: color 0.15s; }
+    .btn-updown:hover { color: var(--navy); }
+    .btn-updown:disabled { color: #e0e0e0; cursor: default; }
+    .item-row-btns { display: flex; align-items: center; gap: 2px; margin-top: 2px; }
+
+    /* Move popup */
+    .move-popup { position: absolute; right: 28px; top: 24px; background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 50; padding: 6px 0; min-width: 140px; }
+    .move-popup-title { font-size: 11px; color: var(--gray); padding: 4px 12px 6px; font-weight: 600; }
+    .move-popup-item { display: block; width: 100%; text-align: left; padding: 8px 14px; font-size: 13px; color: #333; background: none; border: none; cursor: pointer; font-family: inherit; }
+    .move-popup-item:hover { background: var(--light); color: var(--navy); }
+
+    .btn-add-item { width: 100%; padding: 9px; background: var(--light); border: 1.5px dashed #b0c0e8; border-radius: 10px; color: var(--navy); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: background 0.15s; }
+    .btn-add-item:hover { background: #e0e8ff; }
+    .btn-add-day { width: 100%; padding: 12px; background: white; border: 2px dashed #b0c0e8; border-radius: 12px; color: var(--navy); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
+    .btn-add-day:hover { background: var(--light); }
+
+    /* ── Food ── */
+    .food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .food-card { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    .food-emoji { font-size: 32px; margin-bottom: 6px; }
+    .food-name { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .food-desc { font-size: 11px; color: var(--gray); margin-top: 3px; line-height: 1.4; }
+    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+    .card-title { font-size: 15px; font-weight: 700; color: var(--navy); }
+    .card-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin: 2px; }
+    .tag-pink { background: #FFE4EF; color: var(--pink); }
+    .tag-teal { background: #E0F7F5; color: #009688; }
+    .tag-coral { background: #FFE8E0; color: var(--coral); }
+    .tag-navy { background: #E8EBFF; color: var(--navy); }
+
+    /* ── Checklist ── */
+    .checklist-group { margin-bottom: 20px; }
+    .checklist-group-title { font-size: 13px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .check-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 12px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    .check-item.checked { opacity: 0.5; }
+    .check-item.checked .check-label { text-decoration: line-through; }
+    .checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #D0D8E8; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+    .check-item.checked .checkbox { background: var(--teal); border-color: var(--teal); }
+    .checkbox-check { color: white; font-size: 13px; display: none; }
+    .check-item.checked .checkbox-check { display: block; }
+    .check-label { font-size: 14px; }
+    .check-emoji { font-size: 20px; }
+    .progress-wrap { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
+    .progress-label { font-size: 13px; color: var(--gray); margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .progress-bar-bg { background: #F0F4FF; border-radius: 6px; height: 10px; }
+    .progress-bar { height: 10px; border-radius: 6px; background: linear-gradient(90deg, var(--teal), var(--pink)); transition: width 0.4s; }
+
+    /* ── Add-item popup ── */
+    .add-item-popup {
+      position: fixed; left: 16px; right: 16px; bottom: 0;
+      background: white; border-radius: 20px 20px 0 0;
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+      z-index: 300; padding: 16px 16px 36px;
+      max-height: 70vh; overflow-y: auto;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(.2,.8,.3,1);
+    }
+    .add-item-popup.show { transform: translateY(0); }
+    .add-item-popup-title {
+      font-size: 13px; font-weight: 700; color: var(--gray);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid #F0F4FF;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .add-item-popup-close {
+      background: none; border: none; font-size: 18px; color: #bbb; cursor: pointer; padding: 0 2px;
+    }
+    .add-item-backup-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 10px; border-radius: 10px; margin-bottom: 4px;
+      cursor: pointer; transition: background 0.15s;
+      border: 1.5px solid transparent;
+    }
+    .add-item-backup-row:hover { background: var(--light); border-color: #c8d8ff; }
+    .add-item-backup-row-name { font-size: 14px; font-weight: 600; color: var(--navy); }
+    .add-item-backup-row-desc { font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .add-item-blank {
+      width: 100%; margin-top: 10px; padding: 11px;
+      background: var(--light); border: 1.5px dashed #b0c0e8;
+      border-radius: 10px; color: var(--navy);
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .add-item-blank:hover { background: #e0e8ff; }
+    .add-item-empty { text-align: center; color: var(--gray); font-size: 13px; padding: 8px 0 4px; }
+
+    /* ── Backup Spots ── */
+    .backup-card {
+      background: white; border-radius: 14px; padding: 14px 14px 10px;
+      margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .backup-name-input {
+      font-size: 14px; font-weight: 600; color: #333;
+      border: none; background: transparent; font-family: inherit;
+      outline: none; width: 100%; padding: 0;
+    }
+    .backup-name-input:focus { border-bottom: 1.5px solid var(--teal); }
+    .backup-name-input::placeholder { color: #bbb; }
+    .backup-desc-input {
+      font-size: 12px; color: var(--gray);
+      border: none; background: transparent; font-family: inherit;
+      outline: none; width: 100%; resize: none; overflow: hidden; min-height: 18px; padding: 0;
+    }
+    .backup-desc-input:focus { border-bottom: 1px dashed #ccc; }
+    .backup-desc-input::placeholder { color: #ccc; }
+    .backup-actions { display: flex; align-items: center; gap: 6px; padding-top: 4px; border-top: 1px solid #F0F4FF; }
+    .btn-backup-add {
+      flex: 1; padding: 6px 10px; background: var(--light);
+      border: none; border-radius: 8px; color: var(--navy);
+      font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: background 0.15s; text-align: center;
+    }
+    .btn-backup-add:hover { background: #d8e4ff; }
+    .btn-backup-del {
+      background: none; border: none; cursor: pointer; color: #ccc;
+      font-size: 16px; padding: 2px 4px; transition: color 0.15s; flex-shrink: 0;
+    }
+    .btn-backup-del:hover { color: #f46; }
+
+    /* ── Phrases ── */
+    .phrase-card { background: white; border-radius: 14px; padding: 14px 16px; margin-bottom: 8px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.1s; }
+    .phrase-card:active { transform: scale(0.98); }
+    .phrase-kr { font-size: 20px; font-weight: 700; color: var(--navy); }
+    .phrase-zh { font-size: 13px; color: var(--gray); margin-top: 2px; }
+    .phrase-romaji { font-size: 12px; color: var(--teal); font-style: italic; margin-top: 1px; }
+
+    /* ── Info ── */
+    .note-box { background: white; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
+    .note-box h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .note-box p, .note-box li { font-size: 13px; color: #555; line-height: 1.7; }
+    .note-box ul { padding-left: 16px; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F0F4FF; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--gray); }
+    .info-val { color: var(--navy); font-weight: 600; }
+    .budget-total { background: linear-gradient(135deg, var(--navy), #5B6DD4); color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+    .budget-total .label { font-size: 13px; opacity: 0.8; }
+    .budget-total .amount { font-size: 36px; font-weight: 900; margin: 4px 0; }
+    .budget-total .per { font-size: 12px; opacity: 0.7; }
+    .budget-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: white; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    .budget-bar-wrap { flex: 1; }
+    .budget-name { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; }
+    .budget-bar-bg { background: #F0F4FF; border-radius: 4px; height: 6px; }
+    .budget-bar { height: 6px; border-radius: 4px; }
+    .budget-val { font-size: 13px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: white; padding: 8px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+
+    /* ── Overlay to close popup ── */
+    #popup-overlay { display: none; position: fixed; inset: 0; z-index: 40; }
+    #popup-overlay.show { display: block; }
+
+    /* ── Share Panel ── */
+    .share-card { background: linear-gradient(135deg, #E8EBFF, #FFE4EF); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+    .share-card h3 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+    .share-btns { display: flex; flex-direction: column; gap: 8px; }
+    .btn-share { padding: 10px 16px; border-radius: 10px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; justify-content: center; transition: opacity 0.15s; }
+    .btn-share:hover { opacity: 0.85; }
+    .btn-share:active { transform: scale(0.97); }
+    .btn-share.export { background: var(--navy); color: white; }
+    .btn-share.import-btn { background: white; color: var(--navy); border: 1.5px solid #D0D8E8; }
+    .btn-share.copy-link { background: linear-gradient(135deg, var(--teal), #00BCD4); color: white; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-emoji">🌊</div>
+  <h1>釜山之旅</h1>
+  <p>2026/7/8 – 7/12 · 好姐妹同行 💕</p>
+  <div class="countdown">
+    <div class="count-box"><div class="num" id="cnt-d">--</div><div class="label">天</div></div>
+    <div class="count-box"><div class="num" id="cnt-h">--</div><div class="label">小時</div></div>
+    <div class="count-box"><div class="num" id="cnt-m">--</div><div class="label">分鐘</div></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('itinerary',this)"><span class="tab-icon">🗺️</span>行程</button>
+  <button class="tab" onclick="switchTab('backup',this)"><span class="tab-icon">📌</span>備選</button>
+  <button class="tab" onclick="switchTab('food',this)"><span class="tab-icon">🍜</span>美食</button>
+  <button class="tab" onclick="switchTab('pack',this)"><span class="tab-icon">🎒</span>打包</button>
+  <button class="tab" onclick="switchTab('phrases',this)"><span class="tab-icon">💬</span>韓語</button>
+  <button class="tab" onclick="switchTab('info',this)"><span class="tab-icon">ℹ️</span>資訊</button>
+</div>
+
+<!-- ── ITINERARY ── -->
+<div id="tab-itinerary" class="section active">
+
+
+  <div class="section-title">🗺️ 五天行程規劃</div>
+  <div class="edit-hint">✏️ 點文字可編輯・⠿ 拖移換天・🔀 選擇移到哪天</div>
+  <div id="itinerary-root"></div>
+  <button class="btn-add-day" onclick="addDay()">＋ 新增一天</button>
+</div>
+
+<!-- ── FOOD ── -->
+<div id="tab-food" class="section">
+  <div class="section-title">🍜 必吃美食清單</div>
+  <div class="food-grid">
+    <div class="food-card"><div class="food-emoji">🦀</div><div class="food-name">帝王蟹</div><div class="food-desc">機張市場超大份，新鮮到爆</div></div>
+    <div class="food-card"><div class="food-emoji">🍲</div><div class="food-name">豬肉湯飯</div><div class="food-desc">釜山靈魂早餐，濃郁骨湯</div></div>
+    <div class="food-card"><div class="food-emoji">🐟</div><div class="food-name">生魚片</div><div class="food-desc">札嘎其現撈，配燒酒最對</div></div>
+    <div class="food-card"><div class="food-emoji">🍗</div><div class="food-name">韓式炸雞</div><div class="food-desc">配生啤酒，釜山夜晚必備</div></div>
+    <div class="food-card"><div class="food-emoji">🥘</div><div class="food-name">部隊鍋</div><div class="food-desc">熱辣辣一鍋，姐妹同享</div></div>
+    <div class="food-card"><div class="food-emoji">🍢</div><div class="food-name">辣炒年糕</div><div class="food-desc">街邊小吃，甜辣上癮</div></div>
+    <div class="food-card"><div class="food-emoji">🥬</div><div class="food-name">烤五花肉</div><div class="food-desc">包生菜吃，沾大醬最香</div></div>
+    <div class="food-card"><div class="food-emoji">🦑</div><div class="food-name">海鮮煎餅</div><div class="food-desc">外脆內軟，配馬格利酒</div></div>
+    <div class="food-card"><div class="food-emoji">🍦</div><div class="food-name">軟冰淇淋</div><div class="food-desc">夏日消暑，拍照必備</div></div>
+    <div class="food-card"><div class="food-emoji">🍵</div><div class="food-name">馬格利酒</div><div class="food-desc">韓國米酒，微甜好入口</div></div>
+  </div>
+  <div class="section-title" style="margin-top:24px">☕ 網紅咖啡廳</div>
+  <div class="card"><div class="card-header"><div class="card-icon" style="background:#FFF0F5">☕</div><div><div class="card-title">廣安里海景咖啡廳</div><div class="card-sub">面對廣安大橋，晚上夜景超美</div></div></div><span class="tag tag-pink">IG 打卡</span><span class="tag tag-teal">夜景</span></div>
+  <div class="card"><div class="card-header"><div class="card-icon" style="background:#F0FFF4">🌿</div><div><div class="card-title">甘川文化村咖啡廳</div><div class="card-sub">彩色村內，邊喝咖啡邊賞景</div></div></div><span class="tag tag-teal">藝術感</span><span class="tag tag-coral">必拍</span></div>
+  <div class="card"><div class="card-header"><div class="card-icon" style="background:#FFF8E1">🌊</div><div><div class="card-title">海雲台 Waveon Coffee</div><div class="card-sub">透明落地窗直面大海，打卡名店</div></div></div><span class="tag tag-navy">海景</span><span class="tag tag-pink">排隊名店</span></div>
+</div>
+
+<!-- ── PACK ── -->
+<div id="tab-pack" class="section">
+  <div class="section-title">🎒 行前打包清單</div>
+  <div class="progress-wrap">
+    <div class="progress-label"><span>完成進度</span><span id="progress-text">0 / 0</span></div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+  </div>
+  <div class="checklist-group">
+    <div class="checklist-group-title">📄 證件 & 金融</div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🛂</span><span class="check-label">護照（效期 6 個月以上）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🎫</span><span class="check-label">機票訂位確認單</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🏨</span><span class="check-label">住宿訂房確認</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">💳</span><span class="check-label">信用卡 / 現金韓幣</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">📱</span><span class="check-label">韓國 SIM 卡 / 漫遊方案</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🏥</span><span class="check-label">旅遊保險</span></div>
+  </div>
+  <div class="checklist-group">
+    <div class="checklist-group-title">👗 衣物（七月高溫）</div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">👙</span><span class="check-label">泳衣（海水浴場必備！）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">👗</span><span class="check-label">輕薄短袖 / 洋裝 × 5</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🧥</span><span class="check-label">薄外套（室內冷氣很強！）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">👟</span><span class="check-label">舒適步行鞋</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🩴</span><span class="check-label">海灘拖鞋</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🧦</span><span class="check-label">內衣褲 × 5 套</span></div>
+  </div>
+  <div class="checklist-group">
+    <div class="checklist-group-title">🧴 美妝保養</div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">☀️</span><span class="check-label">防曬乳 SPF50+（超重要！）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🧴</span><span class="check-label">基本保養品（小容量）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">💄</span><span class="check-label">防水彩妝</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🪥</span><span class="check-label">牙刷牙膏（飯店未必提供）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">💊</span><span class="check-label">常備藥（腸胃藥、止痛藥）</span></div>
+  </div>
+  <div class="checklist-group">
+    <div class="checklist-group-title">📱 科技 & 配件</div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🔌</span><span class="check-label">充電器 + 行動電源</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🎧</span><span class="check-label">耳機</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">📸</span><span class="check-label">相機 / 自拍棒</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🌂</span><span class="check-label">折疊傘（七月雨季）</span></div>
+    <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"><span class="checkbox-check">✓</span></div><span class="check-emoji">🎽</span><span class="check-label">環保購物袋（買很多！）</span></div>
+  </div>
+</div>
+
+<!-- ── BACKUP SPOTS ── -->
+<div id="tab-backup" class="section">
+  <div class="section-title">📌 備選景點</div>
+  <div class="edit-hint">✏️ 點文字可編輯・按「加入行程」選擇要放哪天・從行程頁用 🔀 可移入此處</div>
+  <div id="backup-root"></div>
+  <button class="btn-add-day" onclick="addBackupSpot()">＋ 新增備選景點</button>
+</div>
+
+<!-- ── PHRASES ── -->
+<div id="tab-phrases" class="section">
+  <div class="section-title">💬 實用韓語</div>
+  <p style="font-size:13px;color:var(--gray);margin-bottom:16px">點卡片可播放韓語發音 🔊</p>
+  <div class="phrase-card" onclick="speak('안녕하세요')"><div class="phrase-kr">안녕하세요</div><div class="phrase-zh">你好 / 您好</div><div class="phrase-romaji">Annyeonghaseyo</div></div>
+  <div class="phrase-card" onclick="speak('감사합니다')"><div class="phrase-kr">감사합니다</div><div class="phrase-zh">謝謝</div><div class="phrase-romaji">Gamsahamnida</div></div>
+  <div class="phrase-card" onclick="speak('얼마예요')"><div class="phrase-kr">얼마예요?</div><div class="phrase-zh">多少錢？</div><div class="phrase-romaji">Eolmayeyo?</div></div>
+  <div class="phrase-card" onclick="speak('맛있어요')"><div class="phrase-kr">맛있어요!</div><div class="phrase-zh">好好吃！</div><div class="phrase-romaji">Massisseoyo!</div></div>
+  <div class="phrase-card" onclick="speak('이거 주세요')"><div class="phrase-kr">이거 주세요</div><div class="phrase-zh">我要這個</div><div class="phrase-romaji">Igeo juseyo</div></div>
+  <div class="phrase-card" onclick="speak('화장실이 어디예요')"><div class="phrase-kr">화장실이 어디예요?</div><div class="phrase-zh">廁所在哪裡？</div><div class="phrase-romaji">Hwajangsiri eodiyeyo?</div></div>
+  <div class="phrase-card" onclick="speak('사진 찍어도 돼요')"><div class="phrase-kr">사진 찍어도 돼요?</div><div class="phrase-zh">可以拍照嗎？</div><div class="phrase-romaji">Sajin jjigeodo dwaeyo?</div></div>
+  <div class="phrase-card" onclick="speak('너무 예뻐요')"><div class="phrase-kr">너무 예뻐요!</div><div class="phrase-zh">好漂亮！</div><div class="phrase-romaji">Neomu yeppeoyo!</div></div>
+  <div class="phrase-card" onclick="speak('깎아 주세요')"><div class="phrase-kr">깎아 주세요!</div><div class="phrase-zh">可以便宜一點嗎？</div><div class="phrase-romaji">Kkakka juseyo!</div></div>
+  <div class="phrase-card" onclick="speak('하나 더 주세요')"><div class="phrase-kr">하나 더 주세요!</div><div class="phrase-zh">再來一份！</div><div class="phrase-romaji">Hana deo juseyo!</div></div>
+  <div class="phrase-card" onclick="speak('카드 돼요')"><div class="phrase-kr">카드 돼요?</div><div class="phrase-zh">可以刷卡嗎？</div><div class="phrase-romaji">Kadeu dwaeyo?</div></div>
+  <div class="phrase-card" onclick="speak('또 올게요')"><div class="phrase-kr">또 올게요!</div><div class="phrase-zh">我還會再來的！</div><div class="phrase-romaji">Ddo olgeyo!</div></div>
+  <div class="phrase-card" onclick="speak('사랑해요')"><div class="phrase-kr">사랑해요 💕</div><div class="phrase-zh">我愛你（跟好姐妹說！）</div><div class="phrase-romaji">Saranghaeyo</div></div>
+</div>
+
+<!-- ── INFO ── -->
+<div id="tab-info" class="section">
+  <div class="section-title">ℹ️ 實用資訊</div>
+  <div class="section-title" style="font-size:16px;margin-bottom:12px">💰 預算估算（5 天 2 人）</div>
+  <div class="budget-total"><div class="label">雙人總預算（台幣）</div><div class="amount">NT$50,000</div><div class="per">每人約 NT$25,000</div></div>
+  <div class="budget-item"><span style="font-size:20px">✈️</span><div class="budget-bar-wrap"><div class="budget-name">機票（來回）</div><div class="budget-bar-bg"><div class="budget-bar" style="width:40%;background:var(--pink)"></div></div></div><span class="budget-val">~20,000</span></div>
+  <div class="budget-item"><span style="font-size:20px">🏨</span><div class="budget-bar-wrap"><div class="budget-name">住宿（4 晚）</div><div class="budget-bar-bg"><div class="budget-bar" style="width:28%;background:#5B6DD4"></div></div></div><span class="budget-val">~14,000</span></div>
+  <div class="budget-item"><span style="font-size:20px">🍜</span><div class="budget-bar-wrap"><div class="budget-name">餐飲（5 天）</div><div class="budget-bar-bg"><div class="budget-bar" style="width:20%;background:var(--coral)"></div></div></div><span class="budget-val">~10,000</span></div>
+  <div class="budget-item"><span style="font-size:20px">🛍️</span><div class="budget-bar-wrap"><div class="budget-name">購物伴手禮</div><div class="budget-bar-bg"><div class="budget-bar" style="width:12%;background:var(--teal)"></div></div></div><span class="budget-val">~6,000</span></div>
+  <div class="note-box" style="margin-top:20px">
+    <h3>🌤️ 七月釜山天氣</h3>
+    <div class="info-row"><span class="info-label">平均氣溫</span><span class="info-val">26–33°C</span></div>
+    <div class="info-row"><span class="info-label">雨季</span><span class="info-val">6月下旬～7月中，記得帶傘</span></div>
+    <div class="info-row"><span class="info-label">服裝建議</span><span class="info-val">輕薄夏裝 + 薄外套</span></div>
+    <div class="info-row"><span class="info-label">防曬</span><span class="info-val">SPF50+ 一定要！</span></div>
+  </div>
+  <div class="note-box">
+    <h3>🚇 交通指南</h3>
+    <ul>
+      <li>釜山地鐵 1–4 號線覆蓋主要景點</li>
+      <li>購買 T-Money 交通卡，搭地鐵公車都方便</li>
+      <li>機場→市區：搭地鐵 2 號線約 40 分鐘</li>
+      <li>計程車起跳約 4,000 韓元，超方便</li>
+    </ul>
+  </div>
+  <div class="note-box">
+    <h3>📱 必裝 App</h3>
+    <ul>
+      <li>🗺️ <strong>Naver Map</strong> — 釜山最準確的地圖</li>
+      <li>🚇 <strong>KakaoMetro</strong> — 地鐵路線導航</li>
+      <li>🌐 <strong>Papago</strong> — 韓語翻譯</li>
+      <li>🚕 <strong>KakaoT</strong> — 叫計程車</li>
+    </ul>
+  </div>
+  <div class="note-box">
+    <h3>🛒 必買伴手禮</h3>
+    <ul>
+      <li>🍫 韓國零食禮盒（好麗友、海太）</li>
+      <li>🧴 韓系保養品、面膜</li>
+      <li>🌶️ 辣椒醬、大醬</li>
+      <li>🍵 麥茶包、玄米茶</li>
+      <li>🧦 韓國可愛棉襪</li>
+    </ul>
+  </div>
+  <div class="note-box" style="background:linear-gradient(135deg,#FFE4EF,#FFF0FB)">
+    <h3>💕 給好姐妹的話</h3>
+    <p>釜山的海很美，但跟妳一起看才最美。<br>吃最多、玩最瘋、拍最美的照片！<br>一起創造美好回憶 🌊✨</p>
+  </div>
+  <div class="share-card" style="margin-top:16px">
+    <h3>🔗 分享行程給好姐妹</h3>
+    <div class="share-btns">
+      <button class="btn-share copy-link" onclick="copyShareLink()">🔗 複製分享連結</button>
+      <button class="btn-share export" onclick="exportJSON()">⬇️ 匯出行程 JSON</button>
+      <button class="btn-share import-btn" onclick="importJSON()">⬆️ 匯入好姐妹的 JSON</button>
+    </div>
+    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">把分享連結傳給好姐妹，她打開後會自動載入妳的行程。若無法複製連結，就匯出 JSON 檔傳給她，她再匯入。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="popup-overlay" onclick="closeAllPopups();closeAddItemPopup()"></div>
+
+<!-- 出征誓言 Popup -->
+<div class="oath-overlay" id="oathOverlay">
+  <div class="oath-modal">
+    <div class="oath-drag-bar"></div>
+    <div class="oath-header-btns">
+      <button class="oath-edit-btn" id="oathEditBtn" onclick="toggleOathEdit()" title="編輯誓言">✏️</button>
+      <button class="oath-close" onclick="closeOath()">✕</button>
+    </div>
+    <div class="oath-title">⚔️ 釜山出征誓言 ⚔️</div>
+    <div class="oath-subtitle" id="oath-subtitle">點每條打勾發誓・全部完成才算出征資格</div>
+    <div id="oath-list"></div>
+    <div class="oath-footer" id="oath-footer">
+      <div class="oath-progress" id="oath-progress"></div>
+      <button class="oath-seal" id="oath-btn" onclick="oathSealAll()">📜 我全部發誓！</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 出征誓言 Popup ──
+const DEFAULT_OATHS = [
+  '不管韓國料理再難吃，絕對不說「還是台灣好」。若違反，負責下一頓所有人的帳單。',
+  '迷路不怪對方。「我就說這條路不對吧！」這句話一出口，自動請喝珍珠奶茶一杯。',
+  '幫對方拍照不得說「夠了啦」「這樣很好了啦」「再拍我手快斷了」。你就是免費攝影師，使命必達。',
+  '出發前一晚突然說「欸我昨晚失眠」「我今天有點不舒服」然後出門一副臭臉，犯規，負責全程幫人擦防曬乳。',
+  '看到對方喜歡的東西，要熱情配合喊「買買買」。不得翻白眼說「妳買那個要幹嘛」，被逮到自動買單一份一樣的。',
+  '早上叫床不超過三次。第四次之後沒有出聲的權利，只能默默去吃早餐等人。',
+  '廁所無論再怎麼急，先讓對方上。搶廁所被抓，視同背叛友誼，需道歉並請一杯飲料。',
+  '不可以說「早知道不來了」「這哪裡好玩」「在家吹冷氣不是更爽」。說出口者，立刻自費買最貴景點門票。',
+  '旅途中所有糗事、醜照、失態影片，回台灣後一律爛在心裡不外傳。違者友誼終止重啟，不接受任何道歉。',
+  '無論此行發生什麼——吵架、迷路、中暑、吃到地雷——回到台灣都只能說「超好玩，下次還要去」。這是最後一條，也是最重要的一條。',
+];
+
+let oaths = loadOaths();
+let oathSworn = [];
+let oathEditing = false;
+
+function loadOaths() {
+  try { const s = localStorage.getItem('busan-oaths'); if (s) return JSON.parse(s); } catch(e) {}
+  return [...DEFAULT_OATHS];
+}
+function saveOaths() {
+  localStorage.setItem('busan-oaths', JSON.stringify(oaths));
+}
+
+function renderOaths() {
+  const list = document.getElementById('oath-list');
+  if (oathEditing) {
+    list.innerHTML = oaths.map((text, i) => `
+      <div class="oath-item editing">
+        <span class="oath-num">${i + 1}.</span>
+        <textarea class="oath-textarea" oninput="oaths[${i}]=this.value;autoResizeOath(this);saveOaths()"
+          onblur="saveOaths()">${text}</textarea>
+        <button class="oath-del-btn" onclick="deleteOath(${i})" title="刪除">✕</button>
+      </div>`).join('') +
+      `<button class="oath-add-btn" onclick="addOath()">＋ 新增一條誓言</button>`;
+    document.getElementById('oath-subtitle').textContent = '✏️ 編輯模式 · 點 ✏️ 完成編輯';
+    document.getElementById('oath-footer').style.display = 'none';
+    setTimeout(() => {
+      list.querySelectorAll('.oath-textarea').forEach(ta => autoResizeOath(ta));
+    }, 0);
+  } else {
+    list.innerHTML = oaths.map((text, i) => `
+      <div class="oath-item${oathSworn[i] ? ' sworn' : ''}" onclick="toggleOath(${i})">
+        <span class="oath-num">${i + 1}.</span>
+        <span class="oath-text">${text}</span>
+        <span class="oath-check">✅</span>
+      </div>`).join('');
+    document.getElementById('oath-subtitle').textContent = '點每條打勾發誓・全部完成才算出征資格';
+    document.getElementById('oath-footer').style.display = '';
+    const done = oathSworn.filter(Boolean).length;
+    document.getElementById('oath-progress').textContent = `已宣誓 ${done} / ${oaths.length} 條`;
+    const btn = document.getElementById('oath-btn');
+    if (done === oaths.length) {
+      btn.textContent = '✅ 誓言完成！出發釜山！';
+      btn.classList.add('done');
+    } else {
+      btn.textContent = '📜 我全部發誓！';
+      btn.classList.remove('done');
+    }
+  }
+}
+
+function autoResizeOath(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function toggleOathEdit() {
+  oathEditing = !oathEditing;
+  const btn = document.getElementById('oathEditBtn');
+  btn.classList.toggle('active', oathEditing);
+  renderOaths();
+}
+
+function toggleOath(i) {
+  if (oathEditing) return;
+  oathSworn[i] = !oathSworn[i];
+  renderOaths();
+}
+
+function deleteOath(i) {
+  if (oaths.length <= 1) { showToast('至少保留一條誓言'); return; }
+  oaths.splice(i, 1);
+  saveOaths();
+  renderOaths();
+}
+
+function addOath() {
+  oaths.push('');
+  saveOaths();
+  renderOaths();
+  setTimeout(() => {
+    const areas = document.querySelectorAll('.oath-textarea');
+    if (areas.length) areas[areas.length - 1].focus();
+  }, 50);
+}
+
+function oathSealAll() {
+  oathSworn = new Array(oaths.length).fill(true);
+  renderOaths();
+  setTimeout(closeOath, 800);
+  showToast('🎉 誓言完成！出發釜山！');
+}
+function closeOath() {
+  oathEditing = false;
+  document.getElementById('oathEditBtn').classList.remove('active');
+  document.getElementById('oathOverlay').classList.remove('show');
+}
+function openOath() {
+  oaths = loadOaths();
+  oathSworn = new Array(oaths.length).fill(false);
+  oathEditing = false;
+  renderOaths();
+  document.getElementById('oathOverlay').classList.add('show');
+}
+
+// 每次進入頁面自動跳出
+setTimeout(openOath, 400);
+
+// ── Default itinerary ──
+const DEFAULT_DAYS = [
+  { label: 'Day 1 · 7/8 (三) · 抵達釜山 · 海雲台', items: [
+    { time: '下午', name: '抵達金海機場 ✈️', desc: '搭乘機場鐵路或地鐵前往市區，約 40 分鐘' },
+    { time: '傍晚', name: '海雲台海水浴場 🏖️', desc: '七月正值旺季！踩沙踩水、拍夕陽金光' },
+    { time: '晚上', name: '海雲台市場夜晚美食 🌙', desc: '海鮮煎餅、血腸、韓式炸雞配生啤' },
+  ]},
+  { label: 'Day 2 · 7/9 (四) · 甘川文化村 · 松島', items: [
+    { time: '上午', name: '甘川文化村 🎨', desc: '釜山最美彩色村，必拍小王子像、迷宮小巷' },
+    { time: '下午', name: '松島海水浴場 + 海上纜車 🚡', desc: '騎腳踏車或搭纜車欣賞海岸全景，超浪漫！' },
+    { time: '晚上', name: '南浦洞 BIFF 廣場 🎬', desc: '釜山電影節發祥地，街邊小吃、豬腳一條街' },
+  ]},
+  { label: 'Day 3 · 7/10 (五) · 市場 · 梵魚寺', items: [
+    { time: '上午', name: '札嘎其魚市場 🐟', desc: '韓國最大海鮮市場，現撈現吃超新鮮刺身' },
+    { time: '下午', name: '梵魚寺 ⛩️', desc: '千年古剎，山林氣息絕佳，夏天消暑聖地' },
+    { time: '傍晚', name: '西面站商圈 🛍️', desc: '購物、美妝、逛街，釜山最熱鬧的商業區' },
+  ]},
+  { label: 'Day 4 · 7/11 (六) · 廣安里 · 機張螃蟹', items: [
+    { time: '上午', name: '機張市場 🦀', desc: '超大帝王蟹、海鮮湯，來釜山必吃！提早去避開人潮' },
+    { time: '下午', name: '廣安里海水浴場 🌅', desc: '廣安大橋正面視野，比海雲台更有氣氛' },
+    { time: '晚上', name: '廣安里夜景 + 咖啡廳 ☕', desc: '廣安大橋燈光秀，二樓咖啡廳邊喝邊看，超浪漫' },
+  ]},
+  { label: 'Day 5 · 7/12 (日) · 購物 · 回台灣', items: [
+    { time: '上午', name: '樂天百貨 / 免稅店 🛒', desc: '最後掃貨機會！零食、保養品、伴手禮' },
+    { time: '中午', name: '最後一餐 豬肉湯飯 🍲', desc: '道地的豬肉湯飯（돼지국밥），釜山特色早午餐' },
+    { time: '下午', name: '前往機場 ✈️', desc: '帶著滿滿回憶飛回台灣！' },
+  ]},
+];
+
+let days = loadDays();
+let dragSrc = null;  // { di, ii }
+
+function loadDays() {
+  try { const s = localStorage.getItem('busan-itinerary-v2'); if (s) return JSON.parse(s); } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_DAYS));
+}
+function saveDays() { localStorage.setItem('busan-itinerary-v2', JSON.stringify(days)); }
+
+// ── Escape for attribute values ──
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function raw(str) {
+  return String(str || '');
+}
+
+// ── Render ──
+function render() {
+  const root = document.getElementById('itinerary-root');
+  root.innerHTML = '';
+  days.forEach((day, di) => {
+    const block = document.createElement('div');
+    block.className = 'day-block';
+    block.innerHTML = `
+      <div class="day-header">
+        <input class="day-label-edit" value="${esc(day.label)}" placeholder="Day 標題"
+          oninput="days[${di}].label=this.value;saveDays()"
+          onblur="saveDays()">
+        <button class="btn-day-delete" onclick="deleteDay(${di})" title="刪除這天">✕</button>
+      </div>
+      <div class="day-card" id="day-card-${di}"
+        ondragover="onDragOver(event,${di})"
+        ondragleave="onDragLeave(event,${di})"
+        ondrop="onDrop(event,${di})">
+        ${day.items.map((item, ii) => buildItem(di, ii, item)).join('')}
+      </div>
+      <button class="btn-add-item" onclick="openAddItemPopup(event,${di})">＋ 新增行程項目</button>`;
+    root.appendChild(block);
+  });
+}
+
+function buildItem(di, ii, item) {
+  const total = days[di].items.length;
+  return `
+    <div class="timeline-item" id="item-${di}-${ii}"
+      draggable="true"
+      ondragstart="onDragStart(event,${di},${ii})"
+      ondragend="onDragEnd(event)"
+      ondragover="onItemDragOver(event,${di},${ii})"
+      ondrop="onItemDrop(event,${di},${ii})">
+      <span class="drag-handle" title="拖移（跨天）" onmousedown="event.stopPropagation()">⠿</span>
+      <input class="time-input" value="${esc(item.time)}" placeholder="時段"
+        oninput="days[${di}].items[${ii}].time=this.value;saveDays()"
+        onblur="saveDays()">
+      <div class="timeline-fields">
+        <input class="spot-name-input" value="${esc(item.name)}" placeholder="景點 / 活動名稱"
+          oninput="days[${di}].items[${ii}].name=this.value;saveDays()">
+        <textarea class="spot-desc-input" rows="1" placeholder="備註說明（可不填）"
+          oninput="days[${di}].items[${ii}].desc=this.value;autoResize(this);saveDays()"
+          onblur="saveDays()">${esc(item.desc)}</textarea>
+      </div>
+      <div class="item-actions">
+        <div style="display:flex;flex-direction:column">
+          <button class="btn-updown" onclick="moveUp(${di},${ii})" ${ii === 0 ? 'disabled' : ''} title="上移">▲</button>
+          <button class="btn-updown" onclick="moveDown(${di},${ii})" ${ii === total - 1 ? 'disabled' : ''} title="下移">▼</button>
+        </div>
+        <div class="item-row-btns">
+          <button class="btn-move" onclick="openMovePopup(event,${di},${ii})" title="移到其他天">🔀</button>
+          <button class="btn-pin" onclick="moveToBackup(${di},${ii})" title="移到備選景點">📌</button>
+          <button class="btn-item-delete" onclick="deleteItem(${di},${ii})" title="刪除">✕</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// ── ▲▼ within-day reorder ──
+function moveUp(di, ii) {
+  if (ii === 0) return;
+  const items = days[di].items;
+  [items[ii - 1], items[ii]] = [items[ii], items[ii - 1]];
+  saveDays(); render();
+}
+function moveDown(di, ii) {
+  const items = days[di].items;
+  if (ii === items.length - 1) return;
+  [items[ii], items[ii + 1]] = [items[ii + 1], items[ii]];
+  saveDays(); render();
+}
+
+// ── Drag & Drop (cross-day + within-day) ──
+function onDragStart(e, di, ii) {
+  dragSrc = { di, ii };
+  e.dataTransfer.effectAllowed = 'move';
+  e.stopPropagation();
+  setTimeout(() => {
+    const el = document.getElementById(`item-${di}-${ii}`);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+function onDragEnd(e) {
+  document.querySelectorAll('.timeline-item.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.day-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  document.querySelectorAll('.timeline-item.drop-target').forEach(el => el.classList.remove('drop-target'));
+  dragSrc = null;
+}
+function onDragOver(e, di) {
+  if (!dragSrc) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.getElementById(`day-card-${di}`).classList.add('drag-over');
+}
+function onDragLeave(e, di) {
+  const card = document.getElementById(`day-card-${di}`);
+  if (!card.contains(e.relatedTarget)) card.classList.remove('drag-over');
+}
+function onDrop(e, toDi) {
+  e.preventDefault();
+  if (!dragSrc) return;
+  const { di: fromDi, ii: fromIi } = dragSrc;
+  if (fromDi === toDi) { document.getElementById(`day-card-${toDi}`).classList.remove('drag-over'); return; }
+  const item = days[fromDi].items.splice(fromIi, 1)[0];
+  days[toDi].items.push(item);
+  saveDays(); render();
+  showToast(`已移到 ${days[toDi].label.split('·')[0].trim()}`);
+}
+// within-day: drag over a specific item → insert before it
+function onItemDragOver(e, di, ii) {
+  if (!dragSrc) return;
+  if (dragSrc.di !== di) return; // cross-day handled by day-card
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.timeline-item.drop-target').forEach(el => el.classList.remove('drop-target'));
+  const el = document.getElementById(`item-${di}-${ii}`);
+  if (el) el.classList.add('drop-target');
+}
+function onItemDrop(e, toDi, toIi) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.querySelectorAll('.timeline-item.drop-target').forEach(el => el.classList.remove('drop-target'));
+  if (!dragSrc) return;
+  const { di: fromDi, ii: fromIi } = dragSrc;
+  if (fromDi !== toDi) return; // cross-day handled by day-card drop
+  if (fromIi === toIi) return;
+  const items = days[fromDi].items;
+  const [moved] = items.splice(fromIi, 1);
+  const insertAt = fromIi < toIi ? toIi - 1 : toIi;
+  items.splice(insertAt, 0, moved);
+  saveDays(); render();
+}
+
+// ── Move popup ──
+let activePopup = null;
+function openMovePopup(e, di, ii) {
+  e.stopPropagation();
+  closeAllPopups();
+
+  const btn = e.currentTarget;
+  const popup = document.createElement('div');
+  popup.className = 'move-popup';
+  popup.id = 'move-popup';
+  popup.innerHTML = '<div class="move-popup-title">移到哪一天？</div>' +
+    days.map((d, i) => i === di ? '' :
+      `<button class="move-popup-item" onclick="moveItem(${di},${ii},${i})">${d.label.split('·').slice(0,2).join('·').trim()}</button>`
+    ).join('') +
+    `<div class="move-popup-title" style="border-top:1px solid #f0f4ff;margin-top:4px;padding-top:8px">或</div>
+     <button class="move-popup-item" onclick="moveToBackup(${di},${ii})" style="color:#FF6B9D">📌 移到備選景點</button>`;
+
+  btn.closest('.timeline-item').querySelector('div[style]').appendChild(popup);
+  activePopup = popup;
+  document.getElementById('popup-overlay').classList.add('show');
+}
+function closeAllPopups() {
+  if (activePopup) { activePopup.remove(); activePopup = null; }
+  document.getElementById('popup-overlay').classList.remove('show');
+}
+function moveItem(fromDi, fromIi, toDi) {
+  const item = days[fromDi].items.splice(fromIi, 1)[0];
+  days[toDi].items.push(item);
+  saveDays(); render(); closeAllPopups();
+  showToast(`已移到 ${days[toDi].label.split('·')[0].trim()}`);
+}
+function moveToBackup(di, ii) {
+  if (days[di].items.length <= 1) { showToast('每天至少保留一個項目'); return; }
+  const item = days[di].items.splice(ii, 1)[0];
+  backupSpots.push({ name: item.name, desc: item.desc });
+  saveDays(); saveBackup(); render(); renderBackup(); closeAllPopups();
+  showToast('📌 已移到備選景點');
+}
+
+// ── Add item popup ──
+let addItemTargetDi = null;
+let addItemPopupEl = null;
+
+function openAddItemPopup(e, di) {
+  e.stopPropagation();
+  closeAddItemPopup();
+  addItemTargetDi = di;
+
+  const popup = document.createElement('div');
+  popup.className = 'add-item-popup';
+  popup.id = 'add-item-popup';
+
+  const spots = backupSpots.filter(s => s.name.trim());
+  const backupHTML = spots.length
+    ? spots.map((s, bi) => `
+        <div class="add-item-backup-row" onclick="addFromBackup(${bi})">
+          <div>
+            <div class="add-item-backup-row-name">${esc(s.name)}</div>
+            ${s.desc ? `<div class="add-item-backup-row-desc">${esc(s.desc)}</div>` : ''}
+          </div>
+        </div>`)
+        .join('')
+    : '<div class="add-item-empty">備選景點是空的</div>';
+
+  popup.innerHTML = `
+    <div class="add-item-popup-title">
+      <span>從備選景點選擇</span>
+      <button class="add-item-popup-close" onclick="closeAddItemPopup()">✕</button>
+    </div>
+    ${backupHTML}
+    <button class="add-item-blank" onclick="addBlankItem()">＋ 新增空白項目</button>`;
+
+  document.body.appendChild(popup);
+  addItemPopupEl = popup;
+  document.getElementById('popup-overlay').classList.add('show');
+  requestAnimationFrame(() => popup.classList.add('show'));
+}
+
+function closeAddItemPopup() {
+  if (addItemPopupEl) {
+    addItemPopupEl.classList.remove('show');
+    setTimeout(() => { if (addItemPopupEl) { addItemPopupEl.remove(); addItemPopupEl = null; } }, 300);
+  }
+  document.getElementById('popup-overlay').classList.remove('show');
+  addItemTargetDi = null;
+}
+
+function addFromBackup(bi) {
+  const spot = backupSpots[bi];
+  const di = addItemTargetDi;
+  days[di].items.push({ time: '待定', name: spot.name, desc: spot.desc });
+  saveDays(); render(); closeAddItemPopup();
+  showToast(`已加入 ${days[di].label.split('·')[0].trim()}`);
+}
+
+function addBlankItem() {
+  const di = addItemTargetDi;
+  days[di].items.push({ time: '時段', name: '', desc: '' });
+  saveDays(); render(); closeAddItemPopup();
+  setTimeout(() => {
+    const ii = days[di].items.length - 1;
+    const el = document.querySelector(`#item-${di}-${ii} .spot-name-input`);
+    if (el) el.focus();
+  }, 50);
+}
+
+// ── Add / Delete ──
+function deleteItem(di, ii) {
+  if (days[di].items.length <= 1) { showToast('至少保留一個項目'); return; }
+  days[di].items.splice(ii, 1);
+  saveDays(); render();
+}
+function addDay() {
+  const n = days.length + 1;
+  days.push({ label: `Day ${n} · 新增一天`, items: [{ time: '上午', name: '', desc: '' }] });
+  saveDays(); render();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.day-label-edit');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+function deleteDay(di) {
+  if (days.length <= 1) { showToast('至少保留一天行程'); return; }
+  days.splice(di, 1);
+  saveDays(); render();
+}
+
+render();
+
+// ── Backup Spots ──
+const DEFAULT_BACKUP = [
+  { name: '影島天空步道', desc: '懸掛在海崖邊的透明步道，俯瞰釜山港絕景' },
+  { name: '海東龍宮寺', desc: '建在海邊岩石上的寺廟，釜山最獨特的景點之一' },
+  { name: '太宗台', desc: '釜山南端岩石海岸，可看對馬島的天氣才能遠眺日本' },
+  { name: '甘川洞 Light 咖啡廳', desc: '彩色村內最有名的打卡咖啡廳' },
+  { name: '山腹道路 Zig Zag', desc: '釜山山城裡的 Z 字型階梯，城市景觀超好' },
+];
+
+let backupSpots = loadBackup();
+
+function loadBackup() {
+  try { const s = localStorage.getItem('busan-backup'); if (s) return JSON.parse(s); } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_BACKUP));
+}
+function saveBackup() { localStorage.setItem('busan-backup', JSON.stringify(backupSpots)); }
+
+function renderBackup() {
+  const root = document.getElementById('backup-root');
+  if (!root) return;
+  if (backupSpots.length === 0) {
+    root.innerHTML = '<p style="text-align:center;color:var(--gray);font-size:13px;padding:20px 0">還沒有備選景點，從行程頁用 🔀 移入，或點下方新增</p>';
+    return;
+  }
+  root.innerHTML = backupSpots.map((spot, i) => `
+    <div class="backup-card">
+      <input class="backup-name-input" value="${esc(spot.name)}" placeholder="景點名稱"
+        oninput="backupSpots[${i}].name=this.value;saveBackup()">
+      <textarea class="backup-desc-input" rows="1" placeholder="備註說明（可不填）"
+        oninput="backupSpots[${i}].desc=this.value;autoResizeBackup(this);saveBackup()"
+        onblur="saveBackup()">${esc(spot.desc)}</textarea>
+      <div class="backup-actions">
+        <button class="btn-backup-add" onclick="openAddToDay(event,${i})">＋ 加入行程</button>
+        <button class="btn-backup-del" onclick="deleteBackupSpot(${i})" title="刪除">✕</button>
+      </div>
+    </div>`).join('');
+  setTimeout(() => {
+    root.querySelectorAll('.backup-desc-input').forEach(ta => autoResizeBackup(ta));
+  }, 0);
+}
+
+function autoResizeBackup(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function addBackupSpot() {
+  backupSpots.push({ name: '', desc: '' });
+  saveBackup(); renderBackup();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.backup-name-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+function deleteBackupSpot(i) {
+  backupSpots.splice(i, 1);
+  saveBackup(); renderBackup();
+}
+
+// "加入行程" → popup 選擇哪一天
+function openAddToDay(e, bi) {
+  e.stopPropagation();
+  closeAllPopups();
+  const btn = e.currentTarget;
+  const popup = document.createElement('div');
+  popup.className = 'move-popup';
+  popup.id = 'move-popup';
+  popup.innerHTML = '<div class="move-popup-title">加入哪一天？</div>' +
+    days.map((d, di) =>
+      `<button class="move-popup-item" onclick="addBackupToDay(${bi},${di})">${d.label.split('·').slice(0,2).join('·').trim()}</button>`
+    ).join('');
+  btn.parentElement.style.position = 'relative';
+  btn.parentElement.appendChild(popup);
+  activePopup = popup;
+  document.getElementById('popup-overlay').classList.add('show');
+}
+function addBackupToDay(bi, di) {
+  const spot = backupSpots[bi];
+  days[di].items.push({ time: '待定', name: spot.name, desc: spot.desc });
+  saveDays(); render(); closeAllPopups();
+  showToast(`已加入 ${days[di].label.split('·')[0].trim()}`);
+}
+
+renderBackup();
+
+// ── Countdown ──
+function updateCountdown() {
+  const diff = new Date('2026-07-08T00:00:00') - new Date();
+  if (diff <= 0) {
+    document.getElementById('cnt-d').textContent = '出發';
+    document.getElementById('cnt-h').textContent = '啦';
+    document.getElementById('cnt-m').textContent = '！';
+    return;
+  }
+  document.getElementById('cnt-d').textContent = Math.floor(diff / 86400000);
+  document.getElementById('cnt-h').textContent = Math.floor((diff % 86400000) / 3600000);
+  document.getElementById('cnt-m').textContent = Math.floor((diff % 3600000) / 60000);
+}
+updateCountdown();
+setInterval(updateCountdown, 60000);
+
+// ── Tabs ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  updateProgress();
+}
+
+// ── Checklist ──
+function toggleCheck(el) { el.classList.toggle('checked'); saveChecklist(); updateProgress(); }
+function saveChecklist() {
+  localStorage.setItem('busan-checklist', JSON.stringify(
+    Array.from(document.querySelectorAll('.check-item')).map(i => i.classList.contains('checked'))
+  ));
+}
+function loadChecklist() {
+  const state = JSON.parse(localStorage.getItem('busan-checklist') || '[]');
+  document.querySelectorAll('.check-item').forEach((item, i) => { if (state[i]) item.classList.add('checked'); });
+  updateProgress();
+}
+function updateProgress() {
+  const items = document.querySelectorAll('.check-item');
+  const checked = document.querySelectorAll('.check-item.checked');
+  const pct = items.length ? Math.round(checked.length / items.length * 100) : 0;
+  const bar = document.getElementById('progress-bar');
+  const txt = document.getElementById('progress-text');
+  if (bar) bar.style.width = pct + '%';
+  if (txt) txt.textContent = checked.length + ' / ' + items.length;
+}
+loadChecklist();
+
+// ── Korean TTS ──
+function speak(text) {
+  if (!('speechSynthesis' in window)) { showToast('此裝置不支援語音'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR'; u.rate = 0.85;
+  const v = window.speechSynthesis.getVoices().find(v => v.lang.startsWith('ko'));
+  if (v) u.voice = v;
+  u.onstart = () => showToast('🔊 ' + text);
+  window.speechSynthesis.speak(u);
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Export / Import / Share ──
+function getAllData() {
+  return { days: days, backupSpots: backupSpots, oaths: oaths };
+}
+function applyData(data) {
+  if (data.days) { days = data.days; saveDays(); render(); }
+  if (data.backupSpots) { backupSpots = data.backupSpots; saveBackup(); renderBackup(); }
+  if (data.oaths) { oaths = data.oaths; saveOaths(); }
+}
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(getAllData(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '釜山行程-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  showToast('✅ 已匯出行程！');
+}
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.days) { showToast('❌ 格式錯誤'); return; }
+        applyData(data);
+        showToast('✅ 行程已匯入！');
+      } catch(err) { showToast('❌ 檔案無法讀取'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function copyShareLink() {
+  try {
+    var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(getAllData()))));
+    var url = location.origin + location.pathname + '#d=' + encoded;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(function() { showToast('🔗 連結已複製！傳給好姐妹吧 💕'); })
+        .catch(function() { prompt('複製以下連結傳給好姐妹：', url); });
+    } else {
+      prompt('複製以下連結傳給好姐妹：', url);
+    }
+  } catch(e) { showToast('❌ 無法產生連結'); }
+}
+// Check URL hash on load for import
+(function checkImportHash() {
+  var hash = location.hash;
+  if (!hash || hash.indexOf('#d=') !== 0) return;
+  try {
+    var data = JSON.parse(decodeURIComponent(escape(atob(hash.slice(3)))));
+    if (!data.days) return;
+    setTimeout(function() {
+      if (confirm('偵測到好姐妹分享的行程！\n要載入嗎？（目前的資料會被取代）')) {
+        applyData(data);
+        showToast('✅ 好姐妹的行程已載入！');
+        history.replaceState(null, '', location.pathname);
+      }
+    }, 700);
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
