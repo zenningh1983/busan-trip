@@ -365,9 +365,10 @@
       border: 1px solid rgba(255,255,255,0.2);
     }
     .sync-chip[data-status="ok"] { background: rgba(78,205,196,0.25); color: #a8f0eb; border-color: rgba(78,205,196,0.3); }
-    .sync-chip[data-status="syncing"], .sync-chip[data-status="pending"] { background: rgba(255,215,0,0.2); color: #ffe97a; border-color: rgba(255,215,0,0.3); }
+    .sync-chip[data-status="dirty"] { background: rgba(255,107,157,0.3); color: #ffcce0; border-color: rgba(255,107,157,0.5); animation: pulse-pink 1.8s ease-in-out infinite; }
+    .sync-chip[data-status="syncing"] { background: rgba(255,215,0,0.2); color: #ffe97a; border-color: rgba(255,215,0,0.3); }
     .sync-chip[data-status="error"] { background: rgba(255,80,80,0.25); color: #ffaaaa; border-color: rgba(255,80,80,0.3); }
-    .sync-chip[data-status="no-token"] { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.2); cursor: pointer; }
+    @keyframes pulse-pink { 0%,100% { opacity:1; } 50% { opacity:0.65; } }
     @keyframes spin { to { transform: rotate(360deg); } }
     .sync-spinning { display: inline-block; animation: spin 1s linear infinite; }
   </style>
@@ -549,12 +550,13 @@
   <div class="share-card" style="margin-top:16px">
     <h3>☁️ 雲端同步</h3>
     <div class="share-btns">
-      <button class="btn-share import-btn" onclick="pullFromGitHub()">🔄 立即拉取好姐妹的修改</button>
+      <button class="btn-share copy-link" onclick="pushToCloud()" style="font-size:14px;padding:12px">☁️ 存到雲端（好姐妹重整即可看到）</button>
+    <button class="btn-share import-btn" onclick="pullFromGitHub()">🔄 拉取好姐妹的最新修改</button>
       <button class="btn-share copy-link" onclick="copyShareLink()" style="background:var(--navy)">🔗 複製分享連結</button>
       <button class="btn-share export" onclick="exportJSON()">⬇️ 匯出 JSON</button>
       <button class="btn-share import-btn" onclick="importJSON()">⬆️ 匯入 JSON</button>
     </div>
-    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">修改行程後自動同步。好姐妹切回分頁時自動拉取最新版。雙方都不需要設定任何帳號或 Token。</p>
+    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">改完後按「存到雲端」，好姐妹重整頁面就看得到。切回分頁時自動拉取對方的修改。雙方都不需要帳號或 Token。</p>
   </div>
 </div>
 
@@ -1169,80 +1171,78 @@ function showToast(msg) {
   t._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ── Auto-Sync via Vercel API (no token needed) ──
+// ── 手動雲端同步 via Vercel API ──
 var SYNC_API = 'https://busan-trip-two.vercel.app/api/sync';
-var syncTimer = null;
-var syncPending = false;
-var cachedSha = null;  // cached after each GET/PUT, skips extra GET on next push
+var cachedSha = null;
+var localDirty = false;
 
 function setSyncChip(status, msg) {
   var el = document.getElementById('sync-chip');
   if (!el) return;
   el.dataset.status = status;
-  var map = { pending: '⏳ 等待同步...', syncing: '同步中...', ok: '☁️ 自動同步', error: '❌ 同步失敗（點此重試）' };
+  var map = { ok: '☁️ 已同步', dirty: '💾 點此存到雲端', syncing: '同步中...', error: '❌ 失敗，點此重試' };
   el.innerHTML = status === 'syncing'
     ? '<span class="sync-spinning">⟳</span> 同步中...'
-    : (msg || map[status] || '☁️ 自動同步');
+    : (msg || map[status] || '');
 }
 
 function syncChipTap() {
-  if (document.getElementById('sync-chip').dataset.status === 'error') silentPush();
+  var s = document.getElementById('sync-chip').dataset.status;
+  if (s === 'dirty' || s === 'error') pushToCloud();
 }
 
-function schedulePush() {
-  syncPending = true;
-  setSyncChip('pending');
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(silentPush, 2500);
-}
-
-async function silentPush() {
-  syncPending = false;
-  setSyncChip('syncing');
-  try {
-    var headers = { 'Content-Type': 'application/json' };
-    if (cachedSha) headers['X-Sha'] = cachedSha;  // skip extra GET on server
-    var r = await fetch(SYNC_API, { method: 'PUT', headers: headers, body: JSON.stringify(getAllData()) });
-    if (r.ok) {
-      var result = await r.json();
-      if (result.sha) cachedSha = result.sha;  // cache new SHA for next push
-      var t = new Date();
-      setSyncChip('ok', '✅ ' + t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ' 已同步');
-    } else { cachedSha = null; setSyncChip('error'); }
-  } catch(ex) { setSyncChip('error'); }
-}
-
-// ── Intercept all saves → auto-push ──
+// 標記有本地改動未同步
 var _setItem = Storage.prototype.setItem;
 Storage.prototype.setItem = function(key, value) {
   _setItem.call(this, key, value);
-  if (this === localStorage && key.startsWith('busan-')) schedulePush();
+  if (this === localStorage && key.startsWith('busan-')) {
+    localDirty = true;
+    setSyncChip('dirty');
+  }
 };
 
-// ── Pull latest from cloud ──
+async function pushToCloud() {
+  setSyncChip('syncing');
+  try {
+    var headers = { 'Content-Type': 'application/json' };
+    if (cachedSha) headers['X-Sha'] = cachedSha;
+    var r = await fetch(SYNC_API, { method: 'PUT', headers: headers, body: JSON.stringify(getAllData()) });
+    if (r.ok) {
+      var res = await r.json();
+      if (res.sha) cachedSha = res.sha;
+      localDirty = false;
+      var t = new Date();
+      setSyncChip('ok', '☁️ ' + t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ' 已同步');
+      showToast('✅ 已存到雲端！好姐妹重整即可看到');
+    } else { setSyncChip('error'); }
+  } catch(ex) { setSyncChip('error'); }
+}
+
+// 拉取雲端資料
 async function pullFromGitHub(silent) {
   if (!silent) showToast('🔄 拉取中...');
   try {
     var r = await fetch(SYNC_API + '?t=' + Date.now());
     if (!r.ok) { if (!silent) showToast('⚠️ 尚無雲端資料'); return; }
-    cachedSha = r.headers.get('X-Sha') || cachedSha;  // cache SHA from GET
+    cachedSha = r.headers.get('X-Sha') || cachedSha;
     var data = await r.json();
     if (!data.days) { if (!silent) showToast('❌ 資料格式錯誤'); return; }
     applyData(data);
+    localDirty = false;
+    setSyncChip('ok');
     if (!silent) showToast('✅ 已拉取最新行程！');
   } catch(ex) { if (!silent) showToast('❌ 拉取失敗'); }
 }
 
-// ── Auto-pull when tab regains focus ──
+// 切回分頁自動拉取（讀取不觸發 deployment）
 document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && !syncPending) pullFromGitHub(true);
+  if (!document.hidden && !localDirty) pullFromGitHub(true);
 });
 
-// ── Init: auto-pull on first visit, then mark sync as active ──
+// 初始化：拉取雲端最新版
 (async function init() {
-  setSyncChip('ok', '☁️ 自動同步中');
-  if (!localStorage.getItem('busan-itinerary-v2')) await pullFromGitHub(true);
-  setSyncChip('ok', '☁️ 自動同步已開啟');
+  await pullFromGitHub(true);
+  if (!localDirty) setSyncChip('ok');
 })();
 
 // ── Export / Import / Share ──
