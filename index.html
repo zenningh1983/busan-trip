@@ -554,8 +554,7 @@
       <button class="btn-share export" onclick="exportJSON()">⬇️ 匯出 JSON</button>
       <button class="btn-share import-btn" onclick="importJSON()">⬆️ 匯入 JSON</button>
     </div>
-    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">每次修改行程後自動同步到 GitHub（需設定 Token）。好姐妹切回分頁時自動拉取最新版，不需要 Token。</p>
-    <button onclick="setupToken()" style="margin-top:8px;background:none;border:none;color:var(--teal);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:inherit">⚙️ 設定 / 更換 GitHub Token</button>
+    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">修改行程後自動同步。好姐妹切回分頁時自動拉取最新版。雙方都不需要設定任何帳號或 Token。</p>
   </div>
 </div>
 
@@ -1170,155 +1169,78 @@ function showToast(msg) {
   t._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ── GitHub Auto-Sync ──
-var GH_OWNER = 'zenningh1983';
-var GH_REPO = 'busan-trip';
-var GH_BRANCH = 'main';
-var GH_FILE = 'data.json';
-var GH_RAW_URL = 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO + '/' + GH_BRANCH + '/' + GH_FILE;
-var GH_API_URL = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_FILE;
+// ── Auto-Sync via Vercel API (no token needed) ──
+var SYNC_API = 'https://busan-trip-two.vercel.app/api/sync';
+var syncTimer = null;
+var syncPending = false;
 
-function getGhToken() { return localStorage.getItem('busan-gh-token') || ''; }
-function setGhToken(t) { localStorage.setItem('busan-gh-token', t.trim()); }
-
-// ── Sync UI ──
 function setSyncChip(status, msg) {
   var el = document.getElementById('sync-chip');
   if (!el) return;
-  var labels = {
-    'no-token': '☁️ 點此設定自動同步',
-    'pending':  '⏳ 等待同步...',
-    'syncing':  '⟳ 同步中...',
-    'ok':       '✅ 已同步',
-    'error':    '❌ 同步失敗（點此重試）',
-  };
   el.dataset.status = status;
-  el.innerHTML = (status === 'syncing' ? '<span class="sync-spinning">⟳</span> 同步中...' : (msg || labels[status] || ''));
-}
-
-// ── Token setup ──
-function setupToken() {
-  var current = getGhToken();
-  var token = prompt(
-    (current ? '目前已設定 Token，輸入新 Token 可更換（清空並確定可清除）：\n\n' : '') +
-    '請輸入 GitHub Personal Access Token\n\n' +
-    '申請：GitHub → Settings → Developer settings\n→ Personal access tokens → Tokens (classic)\n→ Generate new token → 勾選 public_repo\n\n' +
-    'Token 只存在妳的瀏覽器，不會傳到其他地方。',
-    current
-  );
-  if (token === null) return;
-  if (!token.trim()) { localStorage.removeItem('busan-gh-token'); setSyncChip('no-token'); showToast('已清除 Token'); return; }
-  setGhToken(token);
-  setSyncChip('pending');
-  silentPush();
+  var map = { pending: '⏳ 等待同步...', syncing: '同步中...', ok: '☁️ 自動同步', error: '❌ 同步失敗（點此重試）' };
+  el.innerHTML = status === 'syncing'
+    ? '<span class="sync-spinning">⟳</span> 同步中...'
+    : (msg || map[status] || '☁️ 自動同步');
 }
 
 function syncChipTap() {
-  var status = (document.getElementById('sync-chip') || {}).dataset;
-  if (!getGhToken() || (status && status.status === 'no-token')) { setupToken(); return; }
-  if (status && status.status === 'error') { silentPush(); return; }
+  if (document.getElementById('sync-chip').dataset.status === 'error') silentPush();
 }
 
-// ── Auto-push (debounced) ──
-var syncTimer = null;
-var pendingPush = false;
-
 function schedulePush() {
-  if (!getGhToken()) { setSyncChip('no-token'); return; }
-  pendingPush = true;
+  syncPending = true;
   setSyncChip('pending');
   clearTimeout(syncTimer);
   syncTimer = setTimeout(silentPush, 2500);
 }
 
 async function silentPush() {
-  var token = getGhToken();
-  if (!token) { setSyncChip('no-token'); return; }
-  pendingPush = false;
+  syncPending = false;
   setSyncChip('syncing');
   try {
-    var sha = null;
-    var shaRes = await fetch(GH_API_URL, {
-      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (shaRes.ok) {
-      sha = (await shaRes.json()).sha;
-    } else if (shaRes.status === 401) {
-      localStorage.removeItem('busan-gh-token'); setSyncChip('no-token'); return;
-    }
-    var content = btoa(unescape(encodeURIComponent(JSON.stringify(getAllData(), null, 2))));
-    var body = { message: '自動同步', content: content, branch: GH_BRANCH };
-    if (sha) body.sha = sha;
-    var res = await fetch(GH_API_URL, {
+    var r = await fetch(SYNC_API, {
       method: 'PUT',
-      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(getAllData())
     });
-    if (res.ok) {
-      var t = new Date(); var hm = t.getHours() + ':' + String(t.getMinutes()).padStart(2,'0');
-      setSyncChip('ok', '✅ ' + hm + ' 已同步');
-    } else {
-      var e = await res.json();
-      if (e.message && (e.message.includes('credentials') || e.message.includes('Bad'))) {
-        localStorage.removeItem('busan-gh-token'); setSyncChip('no-token');
-      } else { setSyncChip('error'); }
-    }
+    if (r.ok) {
+      var t = new Date();
+      setSyncChip('ok', '✅ ' + t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ' 已同步');
+    } else { setSyncChip('error'); }
   } catch(ex) { setSyncChip('error'); }
 }
 
-// ── Intercept all saves to trigger auto-push ──
+// ── Intercept all saves → auto-push ──
 var _setItem = Storage.prototype.setItem;
 Storage.prototype.setItem = function(key, value) {
   _setItem.call(this, key, value);
-  if (this === localStorage && key.startsWith('busan-') && key !== 'busan-gh-token') {
-    schedulePush();
-  }
+  if (this === localStorage && key.startsWith('busan-')) schedulePush();
 };
 
-// ── Manual pull ──
-async function pullFromGitHub() {
-  showToast('🔄 拉取中...');
+// ── Pull latest from cloud ──
+async function pullFromGitHub(silent) {
+  if (!silent) showToast('🔄 拉取中...');
   try {
-    var res = await fetch(GH_RAW_URL + '?t=' + Date.now());
-    if (!res.ok) { showToast('⚠️ GitHub 上還沒有資料'); return; }
-    var data = await res.json();
-    if (!data.days) { showToast('❌ 資料格式有問題'); return; }
+    var r = await fetch(SYNC_API + '?t=' + Date.now());
+    if (!r.ok) { if (!silent) showToast('⚠️ 尚無雲端資料'); return; }
+    var data = await r.json();
+    if (!data.days) { if (!silent) showToast('❌ 資料格式錯誤'); return; }
     applyData(data);
-    showToast('✅ 已拉取最新行程！');
-  } catch(ex) { showToast('❌ 拉取失敗'); }
+    if (!silent) showToast('✅ 已拉取最新行程！');
+  } catch(ex) { if (!silent) showToast('❌ 拉取失敗'); }
 }
 
 // ── Auto-pull when tab regains focus ──
 document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && !pendingPush) {
-    (async function() {
-      try {
-        var res = await fetch(GH_RAW_URL + '?t=' + Date.now());
-        if (!res.ok) return;
-        var remote = await res.json();
-        if (!remote.days) return;
-        // Compare lightly — skip if we have pending local edits
-        if (!pendingPush && JSON.stringify(remote.days) !== JSON.stringify(days)) {
-          applyData(remote);
-          showToast('🔄 已自動更新好姐妹的修改');
-        }
-      } catch(ex) {}
-    })();
-  }
+  if (!document.hidden && !syncPending) pullFromGitHub(true);
 });
 
-// ── First visit: auto-pull if no local data ──
-(async function autoLoadOnFirstVisit() {
-  if (localStorage.getItem('busan-itinerary-v2')) {
-    setSyncChip(getGhToken() ? 'ok' : 'no-token', getGhToken() ? '☁️ 自動同步已開啟' : null);
-    return;
-  }
-  try {
-    var res = await fetch(GH_RAW_URL + '?t=' + Date.now());
-    if (!res.ok) return;
-    var data = await res.json();
-    if (data.days) { applyData(data); showToast('已載入最新行程'); }
-  } catch(ex) {}
+// ── Init: auto-pull on first visit, then mark sync as active ──
+(async function init() {
+  setSyncChip('ok', '☁️ 自動同步中');
+  if (!localStorage.getItem('busan-itinerary-v2')) await pullFromGitHub(true);
+  setSyncChip('ok', '☁️ 自動同步已開啟');
 })();
 
 // ── Export / Import / Share ──
