@@ -1173,6 +1173,7 @@ function showToast(msg) {
 var SYNC_API = 'https://busan-trip-two.vercel.app/api/sync';
 var syncTimer = null;
 var syncPending = false;
+var cachedSha = null;  // cached after each GET/PUT, skips extra GET on next push
 
 function setSyncChip(status, msg) {
   var el = document.getElementById('sync-chip');
@@ -1199,15 +1200,15 @@ async function silentPush() {
   syncPending = false;
   setSyncChip('syncing');
   try {
-    var r = await fetch(SYNC_API, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(getAllData())
-    });
+    var headers = { 'Content-Type': 'application/json' };
+    if (cachedSha) headers['X-Sha'] = cachedSha;  // skip extra GET on server
+    var r = await fetch(SYNC_API, { method: 'PUT', headers: headers, body: JSON.stringify(getAllData()) });
     if (r.ok) {
+      var result = await r.json();
+      if (result.sha) cachedSha = result.sha;  // cache new SHA for next push
       var t = new Date();
       setSyncChip('ok', '✅ ' + t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ' 已同步');
-    } else { setSyncChip('error'); }
+    } else { cachedSha = null; setSyncChip('error'); }
   } catch(ex) { setSyncChip('error'); }
 }
 
@@ -1224,6 +1225,7 @@ async function pullFromGitHub(silent) {
   try {
     var r = await fetch(SYNC_API + '?t=' + Date.now());
     if (!r.ok) { if (!silent) showToast('⚠️ 尚無雲端資料'); return; }
+    cachedSha = r.headers.get('X-Sha') || cachedSha;  // cache SHA from GET
     var data = await r.json();
     if (!data.days) { if (!silent) showToast('❌ 資料格式錯誤'); return; }
     applyData(data);

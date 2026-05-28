@@ -4,7 +4,7 @@ const GH_API = 'https://api.github.com/repos/zenningh1983/busan-trip/contents/da
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Sha');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const ghHeaders = {
@@ -18,21 +18,29 @@ export default async function handler(req, res) {
     if (!r.ok) return res.status(r.status).json({ error: 'not found' });
     const file = await r.json();
     const data = JSON.parse(Buffer.from(file.content, 'base64').toString('utf-8'));
+    // Return SHA so client can cache it for next push (skips an extra GET)
+    res.setHeader('X-Sha', file.sha);
     return res.json(data);
   }
 
   if (req.method === 'PUT') {
-    // Always fetch latest SHA to prevent conflicts
-    let sha = null;
-    const getR = await fetch(GH_API, { headers: ghHeaders });
-    if (getR.ok) sha = (await getR.json()).sha;
+    // Client can pass cached SHA via header to skip extra GET
+    let sha = req.headers['x-sha'] || null;
+    if (!sha) {
+      const getR = await fetch(GH_API, { headers: ghHeaders });
+      if (getR.ok) sha = (await getR.json()).sha;
+    }
 
     const content = Buffer.from(JSON.stringify(req.body, null, 2)).toString('base64');
     const body = { message: '自動同步', content, branch: 'main' };
     if (sha) body.sha = sha;
 
     const r = await fetch(GH_API, { method: 'PUT', headers: ghHeaders, body: JSON.stringify(body) });
-    return res.status(r.status).json({ ok: r.ok });
+    if (!r.ok) return res.status(r.status).json({ ok: false });
+
+    // Return new SHA so client can update cache
+    const result = await r.json();
+    return res.json({ ok: true, sha: result.content?.sha });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
