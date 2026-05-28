@@ -524,13 +524,20 @@
     <p>釜山的海很美，但跟妳一起看才最美。<br>吃最多、玩最瘋、拍最美的照片！<br>一起創造美好回憶 🌊✨</p>
   </div>
   <div class="share-card" style="margin-top:16px">
-    <h3>🔗 分享行程給好姐妹</h3>
+    <h3>☁️ 同步行程到 GitHub</h3>
     <div class="share-btns">
-      <button class="btn-share copy-link" onclick="copyShareLink()">🔗 複製分享連結</button>
-      <button class="btn-share export" onclick="exportJSON()">⬇️ 匯出行程 JSON</button>
-      <button class="btn-share import-btn" onclick="importJSON()">⬆️ 匯入好姐妹的 JSON</button>
+      <button class="btn-share copy-link" onclick="pushToGitHub()" style="font-size:14px;padding:12px 16px">☁️ 推送到 GitHub（好姐妹重整即可看到）</button>
+      <button class="btn-share import-btn" onclick="pullFromGitHub()">🔄 從 GitHub 拉取好姐妹的修改</button>
     </div>
-    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">把分享連結傳給好姐妹，她打開後會自動載入妳的行程。若無法複製連結，就匯出 JSON 檔傳給她，她再匯入。</p>
+    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">推送需要 GitHub Token（第一次會詢問）。好姐妹不需要 Token，直接進網頁重整就能看到最新行程。</p>
+    <div style="margin-top:10px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px">
+      <p style="font-size:11px;color:#aaa;margin-bottom:6px">其他分享方式</p>
+      <div class="share-btns">
+        <button class="btn-share copy-link" onclick="copyShareLink()" style="background:var(--navy);font-size:12px;padding:8px">🔗 複製分享連結</button>
+        <button class="btn-share export" onclick="exportJSON()" style="font-size:12px;padding:8px">⬇️ 匯出 JSON</button>
+        <button class="btn-share import-btn" onclick="importJSON()" style="font-size:12px;padding:8px">⬆️ 匯入 JSON</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1144,6 +1151,85 @@ function showToast(msg) {
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+// ── GitHub Sync ──
+var GH_OWNER = 'zenningh1983';
+var GH_REPO = 'busan-trip';
+var GH_BRANCH = 'main';
+var GH_FILE = 'data.json';
+var GH_RAW_URL = 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO + '/' + GH_BRANCH + '/' + GH_FILE;
+var GH_API_URL = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_FILE;
+
+function getGhToken() { return localStorage.getItem('busan-gh-token') || ''; }
+function setGhToken(t) { localStorage.setItem('busan-gh-token', t.trim()); }
+
+async function pushToGitHub() {
+  var token = getGhToken();
+  if (!token) {
+    token = prompt(
+      '請輸入你的 GitHub Personal Access Token：\n\n' +
+      '（申請方式：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 勾選 public_repo）\n\n' +
+      'Token 只存在妳自己的瀏覽器，不會上傳到任何地方。'
+    );
+    if (!token || !token.trim()) { showToast('❌ 需要 Token 才能推送'); return; }
+    setGhToken(token);
+  }
+  showToast('☁️ 推送中...');
+  try {
+    // Get current SHA (needed to update existing file)
+    var sha = null;
+    var shaRes = await fetch(GH_API_URL, {
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (shaRes.ok) { sha = (await shaRes.json()).sha; }
+    else if (shaRes.status !== 404) {
+      var err = await shaRes.json();
+      if (err.message && err.message.includes('credentials')) {
+        localStorage.removeItem('busan-gh-token');
+        showToast('❌ Token 無效，請重試');
+        return;
+      }
+    }
+    var content = btoa(unescape(encodeURIComponent(JSON.stringify(getAllData(), null, 2))));
+    var body = { message: '同步行程 ' + new Date().toLocaleString('zh-TW'), content: content, branch: GH_BRANCH };
+    if (sha) body.sha = sha;
+    var res = await fetch(GH_API_URL, {
+      method: 'PUT',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      showToast('✅ 推送完成！好姐妹重整頁面就看得到');
+    } else {
+      var e = await res.json();
+      if (e.message && e.message.includes('credentials')) { localStorage.removeItem('busan-gh-token'); showToast('❌ Token 無效，請重試'); }
+      else { showToast('❌ 推送失敗：' + (e.message || '請再試一次')); }
+    }
+  } catch(ex) { showToast('❌ 網路錯誤：' + ex.message); }
+}
+
+async function pullFromGitHub() {
+  showToast('🔄 拉取中...');
+  try {
+    var res = await fetch(GH_RAW_URL + '?t=' + Date.now());
+    if (!res.ok) { showToast('⚠️ GitHub 上還沒有資料，先推送一次'); return; }
+    var data = await res.json();
+    if (!data.days) { showToast('❌ 資料格式有問題'); return; }
+    applyData(data);
+    showToast('✅ 已拉取最新行程！');
+  } catch(ex) { showToast('❌ 拉取失敗：' + ex.message); }
+}
+
+// Auto-pull on first visit (no local data yet)
+(async function autoLoadOnFirstVisit() {
+  if (localStorage.getItem('busan-itinerary-v2')) return; // already has local data
+  try {
+    var res = await fetch(GH_RAW_URL + '?t=' + Date.now());
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.days) { applyData(data); }
+  } catch(ex) {}
+})();
 
 // ── Export / Import / Share ──
 function getAllData() {
