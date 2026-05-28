@@ -556,7 +556,7 @@
       <button class="btn-share export" onclick="exportJSON()">⬇️ 匯出 JSON</button>
       <button class="btn-share import-btn" onclick="importJSON()">⬆️ 匯入 JSON</button>
     </div>
-    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">改完後按「存到雲端」，好姐妹重整頁面就看得到。切回分頁時自動拉取對方的修改。雙方都不需要帳號或 Token。</p>
+    <p style="font-size:11px;color:#777;margin-top:10px;line-height:1.6">改完後按「存到雲端」，好姐妹重整頁面就看得到。好姐妹切回分頁時自動拉取。推送需要 GitHub Token（第一次按會詢問，之後記住）。</p>
   </div>
 </div>
 
@@ -1171,10 +1171,13 @@ function showToast(msg) {
   t._t = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ── 手動雲端同步 via Vercel API ──
-var SYNC_API = 'https://busan-trip-two.vercel.app/api/sync';
+// ── 手動雲端同步（直接呼叫 GitHub API）──
+var GH_RAW = 'https://raw.githubusercontent.com/zenningh1983/busan-trip/main/data.json';
+var GH_API = 'https://api.github.com/repos/zenningh1983/busan-trip/contents/data.json';
 var cachedSha = null;
 var localDirty = false;
+
+function getToken() { return localStorage.getItem('busan-gh-token') || ''; }
 
 function setSyncChip(status, msg) {
   var el = document.getElementById('sync-chip');
@@ -1191,40 +1194,56 @@ function syncChipTap() {
   if (s === 'dirty' || s === 'error') pushToCloud();
 }
 
-// 標記有本地改動未同步
+// 有改動就標記 dirty（排除 token 本身）
 var _setItem = Storage.prototype.setItem;
 Storage.prototype.setItem = function(key, value) {
   _setItem.call(this, key, value);
-  if (this === localStorage && key.startsWith('busan-')) {
+  if (this === localStorage && key.startsWith('busan-') && key !== 'busan-gh-token') {
     localDirty = true;
     setSyncChip('dirty');
   }
 };
 
 async function pushToCloud() {
+  var token = getToken();
+  if (!token) {
+    token = prompt('第一次需要輸入 GitHub Token\n\n申請：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 勾選 public_repo\n\nToken 只存在妳的瀏覽器，不會外洩。');
+    if (!token || !token.trim()) return;
+    localStorage.setItem('busan-gh-token', token.trim());
+    token = token.trim();
+  }
   setSyncChip('syncing');
   try {
-    var headers = { 'Content-Type': 'application/json' };
-    if (cachedSha) headers['X-Sha'] = cachedSha;
-    var r = await fetch(SYNC_API, { method: 'PUT', headers: headers, body: JSON.stringify(getAllData()) });
+    var ghHeaders = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+    if (!cachedSha) {
+      var infoR = await fetch(GH_API, { headers: ghHeaders });
+      if (infoR.ok) cachedSha = (await infoR.json()).sha;
+    }
+    var body = { message: '同步行程', content: btoa(unescape(encodeURIComponent(JSON.stringify(getAllData(), null, 2)))), branch: 'main' };
+    if (cachedSha) body.sha = cachedSha;
+    var r = await fetch(GH_API, { method: 'PUT', headers: ghHeaders, body: JSON.stringify(body) });
     if (r.ok) {
       var res = await r.json();
-      if (res.sha) cachedSha = res.sha;
+      cachedSha = res.content && res.content.sha;
       localDirty = false;
       var t = new Date();
       setSyncChip('ok', '☁️ ' + t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0') + ' 已同步');
       showToast('✅ 已存到雲端！好姐妹重整即可看到');
-    } else { setSyncChip('error'); }
-  } catch(ex) { setSyncChip('error'); }
+    } else {
+      var e = await r.json();
+      if (r.status === 401) { localStorage.removeItem('busan-gh-token'); cachedSha = null; }
+      setSyncChip('error');
+      showToast('❌ ' + (e.message || '同步失敗'));
+    }
+  } catch(ex) { setSyncChip('error'); showToast('❌ 網路錯誤'); }
 }
 
-// 拉取雲端資料
+// 拉取雲端資料（用 raw URL，不需要 token）
 async function pullFromGitHub(silent) {
   if (!silent) showToast('🔄 拉取中...');
   try {
-    var r = await fetch(SYNC_API + '?t=' + Date.now());
+    var r = await fetch(GH_RAW + '?t=' + Date.now());
     if (!r.ok) { if (!silent) showToast('⚠️ 尚無雲端資料'); return; }
-    cachedSha = r.headers.get('X-Sha') || cachedSha;
     var data = await r.json();
     if (!data.days) { if (!silent) showToast('❌ 資料格式錯誤'); return; }
     applyData(data);
@@ -1234,12 +1253,12 @@ async function pullFromGitHub(silent) {
   } catch(ex) { if (!silent) showToast('❌ 拉取失敗'); }
 }
 
-// 切回分頁自動拉取（讀取不觸發 deployment）
+// 切回分頁自動拉取
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden && !localDirty) pullFromGitHub(true);
 });
 
-// 初始化：拉取雲端最新版
+// 初始化
 (async function init() {
   await pullFromGitHub(true);
   if (!localDirty) setSyncChip('ok');
